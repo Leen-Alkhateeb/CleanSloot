@@ -356,7 +356,8 @@ th { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color:
 
 @media (max-width: 520px) {
     .two, .slots, .cards-4, .stats, .footer-grid { grid-template-columns: 1fr; }
-    
+    .toolbar { flex-wrap: wrap; }
+    .panel, .auth-form { padding: 20px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
