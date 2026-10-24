@@ -1,5 +1,5 @@
 <?php
-/** Services and shop products (one table, the "kind" column tells them apart) */
+
 class Item
 {
     // اتصال القاعدة

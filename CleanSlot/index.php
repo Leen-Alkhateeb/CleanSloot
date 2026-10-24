@@ -1,20 +1,26 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
 
+// أول 4 خدمات ظاهرة من القاعدة (لقسم Popular services)
 $featured = (new Item($db))->featured(4);
+
+// خطوات "كيف يعمل": [العنوان, الوصف]
 $steps    = [
     ['Choose', 'Pick your items from our services and add them to the cart.'],
     ['We collect', 'Choose a pickup time. We come to your door.'],
     ['Delivered fresh', 'Clean, pressed and packed, back to you within 48 hours.'],
 ];
+
+// نقاط قسم "لماذا CleanSlot"
 $why = ['Eco-friendly, toxin-free cleaning', 'Free pickup and delivery', 'Clear prices, pay on delivery', 'Careful handling of every item'];
 
 $title  = 'CleanSlot | Eco-friendly dry cleaning & laundry in Jordan';
-$active = 'home';
+$active = 'home';   // بيلوّن رابط Home بالقائمة
 require __DIR__ . '/includes/header.php';
 ?>
 
 <main id="main">
+    <!-- 1) البانر الكبير: صورة الخلفية من photo('hero') -->
     <section class="hero-banner hero-big" style="background-image: url('<?= e(photo('hero', 1600)) ?>')">
         <div class="container">
             <span class="hero-label">Eco-friendly cleaning</span>
@@ -27,6 +33,7 @@ require __DIR__ . '/includes/header.php';
         </div>
     </section>
 
+    <!-- 2) كيف يعمل: كرت لكل خطوة ($i + 1 = رقم الخطوة) -->
     <section class="section">
         <div class="container">
             <h2>How it works</h2>
@@ -42,6 +49,7 @@ require __DIR__ . '/includes/header.php';
         </div>
     </section>
 
+    <!-- 3) الخدمات الشائعة: من القاعدة (الصورة عن طريق item_image) -->
     <section class="section section-tint">
         <div class="container">
             <div class="row-head">
@@ -63,6 +71,7 @@ require __DIR__ . '/includes/header.php';
         </div>
     </section>
 
+    <!-- 4) لماذا CleanSlot: قائمة مزايا + صورة -->
     <section class="section">
         <div class="container split">
             <div class="stack">
@@ -79,6 +88,7 @@ require __DIR__ . '/includes/header.php';
         </div>
     </section>
 
+    <!-- 5) دعوة للتسجيل: الزر بيتغير حسب إذا المستخدم مسجّل دخول أو لا -->
     <section class="section">
         <div class="container">
             <div class="cta">

@@ -1,38 +1,54 @@
 <?php
+// ============ 1) تهيئة عامة ============
+
+// ضبط التوقيت على توقيت الأردن
 date_default_timezone_set('Asia/Amman');
 
+// إعدادات كوكيز الجلسة:
+// httponly = الجافاسكربت ما بيقدر يقرأ الكوكي
+// samesite = الكوكي ما بيتبعت من مواقع ثانية
+// secure   = بيشتغل على HTTPS فقط (إذا الموقع على HTTPS)
 session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS'])]);
+
+// بدء الجلسة (الذاكرة اللي بتتذكر المستخدم بين الصفحات)
 session_start();
 
-header('X-Content-Type-Options: nosniff');
-header('X-Frame-Options: SAMEORIGIN');
-header('Referrer-Policy: strict-origin-when-cross-origin');
+// حماية عن طريق الهيدرز
+header('X-Content-Type-Options: nosniff');                   // المتصفح ما يخمّن نوع الملف
+header('X-Frame-Options: SAMEORIGIN');                       // ما حدا يعرض موقعك داخل iframe
+header('Referrer-Policy: strict-origin-when-cross-origin');  // ما نكشف الرابط الكامل لمواقع ثانية
 
-require_once __DIR__ . '/../config/Database.php';
-require_once __DIR__ . '/../classes/User.php';
-require_once __DIR__ . '/../classes/Item.php';
-require_once __DIR__ . '/../classes/Order.php';
-require_once __DIR__ . '/../classes/Inquiry.php';
-require_once __DIR__ . '/../config/seed.php';
+// ============ 2) تحميل الملفات والكلاسات ============
+require_once __DIR__ . '/../config/Database.php';   // الاتصال بالقاعدة
+require_once __DIR__ . '/../classes/User.php';      // المستخدمين
+require_once __DIR__ . '/../classes/Item.php';      // الخدمات والمنتجات
+require_once __DIR__ . '/../classes/Order.php';     // الطلبات
+require_once __DIR__ . '/../classes/Inquiry.php';   // الرسائل
+require_once __DIR__ . '/../config/seed.php';       // البيانات التجريبية
 
+// ============ 3) قاعدة البيانات والمستخدم ============
 $db   = Database::connect();
 
-// If the services/products table is empty (schema.sql not imported fully), add the sample data once
+// أول تشغيل: عبّي الخدمات التجريبية إذا الجدول فاضي، وتأكد إنه في أدمن
 try {
     seed_items_if_empty($db);
     ensure_admin($db);
 } catch (PDOException $e) {
-    // table missing: the pages below will show the real database error
+    // الجداول مش موجودة: الصفحات تحت رح تعرض خطأ القاعدة الحقيقي
 }
+
+// المستخدم المسجّل دخوله (أو null إذا زائر)
 $user = $_SESSION['user'] ?? null;
 
-// Web path of the project folder, so links work from any sub-folder
+// ============ 4) مسار المشروع ============
+// بنحسب مكان المشروع عشان الروابط تشتغل من أي مجلد (مثل localhost/cleanslot/)
 $projectPath = str_replace('\\', '/', (string) realpath(__DIR__ . '/..'));
 $docRootPath = str_replace('\\', '/', (string) realpath($_SERVER['DOCUMENT_ROOT'] ?? ''));
 define('BASE', rtrim(substr($projectPath, strlen($docRootPath)), '/') . '/');
 
-/* ---------- Settings: change them here ---------- */
+/* ---------- الإعدادات: غيّرها من هون ---------- */
 
+// فترات الاستلام المتاحة بصفحة السلة
 const SLOTS = [
     '09:00 AM - 11:00 AM',
     '11:00 AM - 01:00 PM',
@@ -40,6 +56,8 @@ const SLOTS = [
     '04:00 PM - 06:00 PM',
 ];
 
+// معلومات التواصل (بتظهر بالفوتر وصفحة اتصل بنا)
+// phone_raw للاتصال (بدون مسافات)، phone للعرض
 const CONTACT = [
     'address'   => 'Amman, Jordan',
     'phone'     => '+962 7 0000 0000',
@@ -48,14 +66,13 @@ const CONTACT = [
     'hours'     => 'Every day, 9:00 AM - 6:00 PM',
 ];
 
-// Real photos from Unsplash (free to use). To use your own picture, put it in
-// assets/img/ and write its path here, for example 'assets/img/hero.jpg'.
+// صور الموقع: رمز صورة من Unsplash، أو مسار ملفك مثل 'assets/img/hero.jpg'
 const PHOTOS = [
-    'hero'      => 'gkbAYJIMVDA',   // white shirts on hangers
-    'machines'  => 'iAcf41WEtRU',   // washing machines
-    'rack'      => '94Tvp4AhlUU',   // shirts on a rack
-    'hangers'   => 'Yy4sN6QzboU',   // hangers on a rail
-    // One key per page, so you can change each picture alone
+    'hero'      => 'gkbAYJIMVDA',   // قمصان بيضا على علاقات
+    'machines'  => 'iAcf41WEtRU',   // غسالات
+    'rack'      => '94Tvp4AhlUU',   // قمصان على رف
+    'hangers'   => 'Yy4sN6QzboU',   // علاقات
+    // مفتاح لكل صفحة، عشان تغيّر كل صورة لحالها
     'story'     => 'iAcf41WEtRU',
     'franchise' => 'iAcf41WEtRU',
     'b2b'       => '94Tvp4AhlUU',
@@ -66,7 +83,7 @@ const PHOTOS = [
     'team'      => 'Yy4sN6QzboU',
 ];
 
-// Which photo each service type / shop uses when the item has no picture of its own
+// الصورة الافتراضية لكل نوع خدمة (إذا العنصر ما إله صورة خاصة فيه)
 const TYPE_PHOTOS = [
     'EcoClean (DryClean)'          => 'rack',
     'Iron Only'                    => 'hangers',
@@ -74,39 +91,43 @@ const TYPE_PHOTOS = [
     'Shop'                         => 'hangers',
 ];
 
+// حالات الطلب المسموحة
 const ORDER_STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
 
-/* ---------- Small helpers ---------- */
+/* ---------- دوال مساعدة عامة ---------- */
 
-/** Escape text for HTML */
+// تنظيف النص قبل طباعته بالصفحة (حماية من XSS)
 function e($value)
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-/** Link to a file inside the project: url('services.php') */
+// بناء رابط لملف داخل المشروع: url('services.php')
 function url($path = '')
 {
     return BASE . ltrim($path, '/');
 }
 
+// تنسيق السعر: JOD 5.50
 function money($value)
 {
     return 'JOD ' . number_format((float) $value, 2);
 }
 
+// تحويل لصفحة ثانية وإيقاف الصفحة الحالية
 function redirect($path)
 {
     header('Location: ' . $path);
     exit;
 }
 
-/** Save a one-time message to show on the next page */
+// تخزين رسالة مؤقتة بتظهر بالصفحة اللي بعد الـ redirect
 function flash($message, $type = 'success')
 {
     $_SESSION['flash'] = [$message, $type];
 }
 
+// قراءة الرسالة المؤقتة وحذفها (header.php بيستدعيها)
 function pull_flash()
 {
     $flash = $_SESSION['flash'] ?? null;
@@ -114,6 +135,7 @@ function pull_flash()
     return $flash;
 }
 
+// حقل مخفي فيه توكن الحماية، بيتحط داخل كل فورم POST
 function csrf_field()
 {
     if (empty($_SESSION['csrf'])) {
@@ -122,6 +144,7 @@ function csrf_field()
     return '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">';
 }
 
+// التحقق من التوكن عند استقبال الفورم، وإذا غلط بيوقف الطلب
 function csrf_check()
 {
     $token = $_POST['csrf'] ?? '';
@@ -131,20 +154,23 @@ function csrf_check()
     }
 }
 
+// وسم ملوّن لحالة الطلب (pending, completed...)
 function status_badge($status)
 {
     return '<span class="badge badge-' . e($status) . '">' . e(ucfirst($status)) . '</span>';
 }
 
-/** Keeps the other filters in the link: filter_url('services.php', ['type' => 'Shoe Care']) */
+// رابط بيحافظ على الفلاتر الحالية ويغيّر وحد منهم
+// filter_url('services.php', ['type' => 'Shoe Care'])
 function filter_url($page, array $change = [])
 {
     $query = array_filter(array_merge($_GET, $change), fn($v) => $v !== '' && $v !== null);
     return url($page . ($query ? '?' . http_build_query($query) : ''));
 }
 
-/* ---------- Login ---------- */
+/* ---------- تسجيل الدخول ---------- */
 
+// الصفحة للمسجّلين فقط (الزائر بيتحول لصفحة الدخول)
 function require_login()
 {
     if (empty($_SESSION['user'])) {
@@ -152,6 +178,7 @@ function require_login()
     }
 }
 
+// الصفحة للأدمن فقط
 function require_admin()
 {
     if (empty($_SESSION['user'])) {
@@ -163,85 +190,101 @@ function require_admin()
     }
 }
 
+// تسجيل دخول المستخدم (بنخزّن بس الأساسيات بالجلسة)
 function login_user($row)
 {
-    session_regenerate_id(true);
+    session_regenerate_id(true);   // معرّف جلسة جديد للأمان
     $_SESSION['user'] = ['id' => $row['id'], 'name' => $row['name'], 'role' => $row['role']];
 }
 
-/** After 5 wrong tries the login form pauses for 5 minutes */
+// بعد 5 محاولات غلط الدخول بيتقفل 5 دقائق. بترجع الدقائق المتبقية (أو 0)
 function login_locked()
 {
     $a = $_SESSION['login_fail'] ?? ['n' => 0, 'until' => 0];
     return $a['until'] > time() ? ceil(($a['until'] - time()) / 60) : 0;
 }
 
+// تسجيل محاولة دخول فاشلة
 function login_failed()
 {
     $a = $_SESSION['login_fail'] ?? ['n' => 0, 'until' => 0];
     $a['n']++;
     if ($a['n'] >= 5) {
-        $a = ['n' => 0, 'until' => time() + 300];
+        $a = ['n' => 0, 'until' => time() + 300];   // قفل 5 دقائق
     }
     $_SESSION['login_fail'] = $a;
 }
 
+// دخول ناجح: مسح عدّاد الفشل
 function login_ok()
 {
     unset($_SESSION['login_fail']);
 }
 
-/* ---------- Photos ---------- */
+/* ---------- الصور ---------- */
 
-/** Picture of a project photo key: photo('hero', 1400) */
+// رابط صورة من إعدادات PHOTOS: photo('hero', 1400)
 function photo($key, $width = 900)
 {
     $value = PHOTOS[$key] ?? PHOTOS['hero'];
+
+    // إذا القيمة مسار ملف (فيها /) بنستخدمه مباشرة
     if (strpos($value, '/') !== false) {
-        return url($value);           // your own file in assets/img
+        return url($value);
     }
-    // A local copy always wins and never depends on the internet: assets/img/photos/hero.jpg
+
+    // نسخة محلية بمجلد assets/img/photos/ بتغلب دايماً وما بتحتاج نت
     foreach (['jpg', 'jpeg', 'webp', 'png'] as $ext) {
         if (is_file(__DIR__ . '/../assets/img/photos/' . $key . '.' . $ext)) {
             return url('assets/img/photos/' . $key . '.' . $ext);
         }
     }
+
+    // وإلا بنحمّلها من Unsplash (بتحتاج نت، وغالباً هاد سبب الصور المكسورة)
     return 'https://unsplash.com/photos/' . $value . '/download?w=' . (int) $width;
 }
 
-/** Picture of an item: uploaded file, image link, or the default photo of its type */
+// صورة عنصر: ملف مرفوع، أو رابط خارجي، أو الصورة الافتراضية لنوعه
 function item_image($item)
 {
     $image = $item['image'] ?? '';
+
+    // رابط خارجي
     if (preg_match('#^https?://#i', $image)) {
         return $image;
     }
+    // ملف مرفوع (بصيغة uploads/اسم.jpg)
     if (preg_match('#^uploads/[A-Za-z0-9._-]+$#', $image)) {
         return url($image);
     }
+    // الصورة الافتراضية حسب نوع الخدمة
     return photo(TYPE_PHOTOS[$item['type']] ?? 'machines', 600);
 }
 
-/** If a picture fails to load, show a clean placeholder instead of a broken icon */
+// إذا الصورة انكسرت بنعرض صورة بديلة بدل الأيقونة المكسورة
 function img_fallback()
 {
     return "onerror=\"this.onerror=null;this.src='" . e(url('assets/img/placeholder.svg')) . "'\"";
 }
 
-/** Saves an uploaded picture into /uploads. Returns [path|null, error|null] */
+// حفظ صورة مرفوعة بمجلد uploads. بترجع [المسار, الخطأ]
 function save_upload(array $file)
 {
+    // ما انرفع ولا ملف: مش خطأ
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
         return [null, null];
     }
+    // خطأ بالرفع أو الحجم أكبر من 2MB
     if ($file['error'] !== UPLOAD_ERR_OK || $file['size'] > 2 * 1024 * 1024) {
         return [null, 'The picture must be smaller than 2 MB.'];
     }
+    // فحص النوع الحقيقي للملف (مش بس الامتداد)
     $types = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
     $mime  = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
     if (!isset($types[$mime])) {
         return [null, 'Only JPG, PNG or WEBP pictures are allowed.'];
     }
+    // اسم عشوائي عشان ما يتكرر
     $name = bin2hex(random_bytes(8)) . '.' . $types[$mime];
     if (!move_uploaded_file($file['tmp_name'], __DIR__ . '/../uploads/' . $name)) {
         return [null, 'Could not save the picture. Check the uploads folder permissions.'];
@@ -249,7 +292,7 @@ function save_upload(array $file)
     return ['uploads/' . $name, null];
 }
 
-/** Removes a picture that was uploaded earlier (never touches links) */
+// حذف صورة مرفوعة سابقاً (الروابط الخارجية ما بتنلمس)
 function delete_upload($path)
 {
     if (preg_match('#^uploads/[A-Za-z0-9._-]+$#', (string) $path)) {
@@ -260,14 +303,15 @@ function delete_upload($path)
     }
 }
 
-/* ---------- Cart (kept in the session: item id => quantity) ---------- */
+/* ---------- السلة (مخزنة بالجلسة: رقم العنصر => الكمية) ---------- */
 
+// عدد القطع بالسلة
 function cart_count()
 {
     return array_sum($_SESSION['cart'] ?? []);
 }
 
-/** Cart rows with item details and a line total. Removed items are dropped. */
+// عناصر السلة بتفاصيلها ومجموع كل سطر (العناصر المحذوفة أو المخفية بتنشال)
 function cart_rows(Item $items)
 {
     $rows = [];
@@ -284,35 +328,38 @@ function cart_rows(Item $items)
     return $rows;
 }
 
-/* ---------- Contact / Support / B2B / Franchise forms ---------- */
+/* ---------- فورمات اتصل بنا / الدعم / B2B / الفرنشايز ---------- */
 
-/**
- * Handles the form of a page. Call it before any output.
- * Returns [old values, errors]. On success it saves the message and redirects back.
- */
+// معالجة فورم الصفحة (نادِها قبل أي طباعة). بترجع [القيم القديمة, الأخطاء]
+// وإذا نجح الإرسال بتحفظ الرسالة وبترجع للصفحة
 function process_inquiry($topic, Inquiry $inquiries, $page)
 {
     global $user;
     $old    = ['name' => $user['name'] ?? '', 'email' => '', 'phone' => '', 'company' => '', 'message' => ''];
     $errors = [];
 
+    // إذا الصفحة انفتحت عادي (مش إرسال) رجّع الفورم الفاضي
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         return [$old, $errors];
     }
     csrf_check();
 
-    // Spam protection: a hidden field bots fill in, and 5 messages per 10 minutes
+    // حماية من السبام: حقل مخفي بيعبّيه البوت (الإنسان ما بيشوفه)
     if (trim($_POST['website'] ?? '') !== '') {
         redirect(url($page));
     }
+    // حد أقصى 5 رسائل كل 10 دقائق
     $recent = array_filter($_SESSION['inquiry_times'] ?? [], fn($t) => $t > time() - 600);
     if (count($recent) >= 5) {
         $errors['message'] = 'Too many messages. Please wait a few minutes and try again.';
     }
 
+    // قراءة الحقول من الفورم
     foreach ($old as $key => $unused) {
         $old[$key] = trim($_POST[$key] ?? '');
     }
+
+    // فحص كل حقل
     if (mb_strlen($old['name']) < 2 || mb_strlen($old['name']) > 100) {
         $errors['name'] = 'Please enter your name.';
     }
@@ -329,6 +376,7 @@ function process_inquiry($topic, Inquiry $inquiries, $page)
         $errors['message'] = 'Message must be between 10 and 2000 characters.';
     }
 
+    // ما في أخطاء: احفظ الرسالة وارجع للصفحة برسالة شكر
     if (!$errors) {
         $recent[] = time();
         $_SESSION['inquiry_times'] = $recent;
@@ -339,12 +387,15 @@ function process_inquiry($topic, Inquiry $inquiries, $page)
     return [$old, $errors];
 }
 
-/** True when the pickup time starts in the past (only matters for today's date) */
+/* ---------- المواعيد ---------- */
+
+// هل وقت الاستلام فات؟ (بيهم بس إذا التاريخ هو اليوم)
 function slot_has_passed($date, $slot)
 {
     if ($date !== date('Y-m-d')) {
         return false;
     }
+    // بداية الفترة: من '09:00 AM - 11:00 AM' بناخد '09:00 AM'
     $start = DateTime::createFromFormat('Y-m-d h:i A', $date . ' ' . trim(explode(' - ', $slot)[0]));
     return $start && $start <= new DateTime();
 }

@@ -4,29 +4,30 @@ require_once __DIR__ . '/includes/functions.php';
 $items = new Item($db);
 $types = $items->values('type', 'service');
 
-// Filters from the address bar
-$f = [
-    'type'        => $_GET['type'] ?? '',
-    'category'    => $_GET['category'] ?? '',
-    'subcategory' => $_GET['subcategory'] ?? '',
-    'q'           => trim($_GET['q'] ?? ''),
-    'max'         => $_GET['max'] ?? '',
-    'sort'        => $_GET['sort'] ?? '',
-];
+// الفلاتر من الرابط
+$f = [];
+foreach (['type', 'category', 'subcategory', 'q', 'max', 'sort'] as $key) {
+    $f[$key] = trim($_GET[$key] ?? '');
+}
+
+// النوع لازم يكون موجود، وإلا أول نوع
 if (!in_array($f['type'], $types, true)) {
     $f['type'] = $types[0] ?? '';
 }
 
 $categories    = $items->values('category', 'service', ['type' => $f['type']]);
-$subcategories = $f['category'] !== '' ? $items->values('subcategory', 'service', ['type' => $f['type'], 'category' => $f['category']]) : [];
+$subcategories = $f['category'] ? $items->values('subcategory', 'service', ['type' => $f['type'], 'category' => $f['category']]) : [];
 $list          = $items->search('service', $f);
 
-$title       = 'Services | CleanSlot';
-$active      = 'services';
-$heroLabel   = 'CleanSlot services';
-$heroTitle   = $f['type'];
-$heroText    = 'Toxin-free, eco-friendly cleaning for a greener world. Pick your items, we collect and deliver.';
-$heroPhoto   = 'hero';
+// دالة صغيرة: بترجع "chip active" إذا الشرط صح
+function chip($on) { return $on ? 'chip active' : 'chip'; }
+
+$title     = 'Services | CleanSlot';
+$active    = 'services';
+$heroLabel = 'CleanSlot services';
+$heroTitle = $f['type'];
+$heroText  = 'Toxin-free, eco-friendly cleaning for a greener world. Pick your items, we collect and deliver.';
+$heroPhoto = 'hero';
 require __DIR__ . '/includes/header.php';
 require __DIR__ . '/includes/page_hero.php';
 ?>
@@ -37,7 +38,7 @@ require __DIR__ . '/includes/page_hero.php';
 
         <div class="chips chips-lg">
             <?php foreach ($types as $t): ?>
-                <a href="<?= filter_url('services.php', ['type' => $t, 'category' => '', 'subcategory' => '']) ?>" class="chip <?= $f['type'] === $t ? 'active' : '' ?>"><?= e($t) ?></a>
+                <a href="<?= filter_url('services.php', ['type' => $t, 'category' => '', 'subcategory' => '']) ?>" class="<?= chip($f['type'] === $t) ?>"><?= e($t) ?></a>
             <?php endforeach; ?>
         </div>
 
@@ -46,9 +47,9 @@ require __DIR__ . '/includes/page_hero.php';
                 <div class="panel">
                     <h4>Category</h4>
                     <div class="chips">
-                        <a href="<?= filter_url('services.php', ['category' => '', 'subcategory' => '']) ?>" class="chip <?= $f['category'] === '' ? 'active' : '' ?>">All</a>
+                        <a href="<?= filter_url('services.php', ['category' => '', 'subcategory' => '']) ?>" class="<?= chip($f['category'] === '') ?>">All</a>
                         <?php foreach ($categories as $c): ?>
-                            <a href="<?= filter_url('services.php', ['category' => $c, 'subcategory' => '']) ?>" class="chip <?= $f['category'] === $c ? 'active' : '' ?>"><?= e($c) ?></a>
+                            <a href="<?= filter_url('services.php', ['category' => $c, 'subcategory' => '']) ?>" class="<?= chip($f['category'] === $c) ?>"><?= e($c) ?></a>
                         <?php endforeach; ?>
                     </div>
 
@@ -56,9 +57,9 @@ require __DIR__ . '/includes/page_hero.php';
                         <hr>
                         <h4>Sub-category</h4>
                         <div class="chips">
-                            <a href="<?= filter_url('services.php', ['subcategory' => '']) ?>" class="chip <?= $f['subcategory'] === '' ? 'active' : '' ?>">All</a>
+                            <a href="<?= filter_url('services.php', ['subcategory' => '']) ?>" class="<?= chip($f['subcategory'] === '') ?>">All</a>
                             <?php foreach ($subcategories as $s): ?>
-                                <a href="<?= filter_url('services.php', ['subcategory' => $s]) ?>" class="chip <?= $f['subcategory'] === $s ? 'active' : '' ?>"><?= e($s) ?></a>
+                                <a href="<?= filter_url('services.php', ['subcategory' => $s]) ?>" class="<?= chip($f['subcategory'] === $s) ?>"><?= e($s) ?></a>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
@@ -77,8 +78,8 @@ require __DIR__ . '/includes/page_hero.php';
                     <input type="hidden" name="type" value="<?= e($f['type']) ?>">
                     <input type="hidden" name="category" value="<?= e($f['category']) ?>">
                     <input type="hidden" name="subcategory" value="<?= e($f['subcategory']) ?>">
-                    <input type="search" name="q" value="<?= e($f['q']) ?>" placeholder="Search services" aria-label="Search services">
-                    <select name="sort" aria-label="Sort" onchange="this.form.submit()">
+                    <input type="search" name="q" value="<?= e($f['q']) ?>" placeholder="Search services">
+                    <select name="sort" onchange="this.form.submit()">
                         <option value="">Best Match</option>
                         <option value="price_asc" <?= $f['sort'] === 'price_asc' ? 'selected' : '' ?>>Price: low to high</option>
                         <option value="price_desc" <?= $f['sort'] === 'price_desc' ? 'selected' : '' ?>>Price: high to low</option>
